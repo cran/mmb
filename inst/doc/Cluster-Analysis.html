@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Sebastian Hönel" />
+
+<meta name="date" content="2020-09-15" />
+
+<title>Cluster Analysis</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
+// v0.0.1
+// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
+
+document.addEventListener('DOMContentLoaded', function() {
+  const codeList = document.getElementsByClassName("sourceCode");
+  for (var i = 0; i < codeList.length; i++) {
+    var linkList = codeList[i].getElementsByTagName('a');
+    for (var j = 0; j < linkList.length; j++) {
+      if (linkList[j].innerHTML === "") {
+        linkList[j].setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
+});
+</script>
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Cluster Analysis</h1>
+<h4 class="author">Sebastian Hönel</h4>
+<h4 class="date">2020-09-15</h4>
+
+
+
+<blockquote>
+<p>In this vignette, we are evaluating neighborhood-search, network-centralities and vicinities using Bayesian estimators as implemented in <em>mmb</em>.</p>
+</blockquote>
+<div id="vicinity-example" class="section level1">
+<h1>Vicinity Example</h1>
+<p>Using some gradient-coloring:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">library</span>(mmb)</span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="kw">library</span>(Rtsne)</span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="kw">library</span>(ggplot2)</span>
+<span id="cb1-4"><a href="#cb1-4"></a><span class="kw">library</span>(ggpubr)</span>
+<span id="cb1-5"><a href="#cb1-5"></a></span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="kw">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb1-7"><a href="#cb1-7"></a>chooseSample &lt;-<span class="st"> </span><span class="dv">1</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a></span>
+<span id="cb1-9"><a href="#cb1-9"></a>df &lt;-<span class="st"> </span>iris[<span class="kw">sample</span>(<span class="kw">rownames</span>(iris)), ]</span>
+<span id="cb1-10"><a href="#cb1-10"></a><span class="co">#df &lt;- iris[,]</span></span>
+<span id="cb1-11"><a href="#cb1-11"></a>tsne &lt;-<span class="st"> </span>Rtsne<span class="op">::</span><span class="kw">Rtsne</span>(df[, <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>], <span class="dt">check_duplicates =</span> <span class="ot">FALSE</span>)</span>
+<span id="cb1-12"><a href="#cb1-12"></a><span class="co"># Attach:</span></span>
+<span id="cb1-13"><a href="#cb1-13"></a>df<span class="op">$</span>X &lt;-<span class="st"> </span>tsne<span class="op">$</span>Y[, <span class="dv">1</span>]</span>
+<span id="cb1-14"><a href="#cb1-14"></a>df<span class="op">$</span>Y &lt;-<span class="st"> </span>tsne<span class="op">$</span>Y[, <span class="dv">2</span>]</span>
+<span id="cb1-15"><a href="#cb1-15"></a></span>
+<span id="cb1-16"><a href="#cb1-16"></a><span class="co"># Let&#39;s pick one sample to calculate the vicinity for:</span></span>
+<span id="cb1-17"><a href="#cb1-17"></a>s &lt;-<span class="st"> </span>df[chooseSample, <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>]</span>
+<span id="cb1-18"><a href="#cb1-18"></a>vics &lt;-<span class="st"> </span>mmb<span class="op">::</span><span class="kw">vicinitiesForSample</span>(<span class="dt">doEcdf =</span> <span class="ot">FALSE</span>, <span class="dt">shiftAmount =</span> <span class="dv">1</span>,</span>
+<span id="cb1-19"><a href="#cb1-19"></a>  <span class="dt">df =</span> df[, <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>], <span class="dt">sampleFromDf =</span> s, <span class="dt">selectedFeatureNames =</span> <span class="kw">colnames</span>(s),</span>
+<span id="cb1-20"><a href="#cb1-20"></a>  <span class="dt">retainMinValues =</span> <span class="dv">5</span>)</span>
+<span id="cb1-21"><a href="#cb1-21"></a><span class="co">#&gt; Warning in value[[3L]](cond): Density estimation failed: Error in bw.SJ(x, method = &quot;ste&quot;): sample is too sparse to find TD</span></span>
+<span id="cb1-22"><a href="#cb1-22"></a><span class="co">#&gt; Warning in `[&lt;-.data.frame`(`*tmp*`, names(centralities), , value = list(:</span></span>
+<span id="cb1-23"><a href="#cb1-23"></a><span class="co">#&gt; provided 7 variables to replace 1 variables</span></span>
+<span id="cb1-24"><a href="#cb1-24"></a></span>
+<span id="cb1-25"><a href="#cb1-25"></a><span class="co"># Attach to df:</span></span>
+<span id="cb1-26"><a href="#cb1-26"></a>df<span class="op">$</span>vics &lt;-<span class="st"> </span>vics<span class="op">$</span>vicinity</span>
+<span id="cb1-27"><a href="#cb1-27"></a><span class="co"># TEMP TEMP TEMP: Discretize vics</span></span>
+<span id="cb1-28"><a href="#cb1-28"></a>mmbd &lt;-<span class="st"> </span>mmb<span class="op">::</span><span class="kw">discretizeVariableToRanges</span>(df<span class="op">$</span>vics, <span class="dt">numRanges =</span> <span class="kw">length</span>(<span class="kw">levels</span>(df<span class="op">$</span>Species)))</span>
+<span id="cb1-29"><a href="#cb1-29"></a>df<span class="op">$</span>vicsD &lt;-<span class="st"> </span><span class="kw">sapply</span>(df<span class="op">$</span>vics, <span class="cf">function</span>(v) {</span>
+<span id="cb1-30"><a href="#cb1-30"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(mmbd)) {</span>
+<span id="cb1-31"><a href="#cb1-31"></a>    r &lt;-<span class="st"> </span>mmbd[[i]]</span>
+<span id="cb1-32"><a href="#cb1-32"></a>    <span class="cf">if</span> (v <span class="op">&gt;=</span><span class="st"> </span>r[<span class="dv">1</span>] <span class="op">&amp;&amp;</span><span class="st"> </span>v <span class="op">&lt;</span><span class="st"> </span>r[<span class="dv">2</span>]) <span class="kw">return</span>(<span class="kw">paste</span>(<span class="st">&quot;R&quot;</span>, i, <span class="dt">sep =</span> <span class="st">&quot;_&quot;</span>))</span>
+<span id="cb1-33"><a href="#cb1-33"></a>  }</span>
+<span id="cb1-34"><a href="#cb1-34"></a>})</span>
+<span id="cb1-35"><a href="#cb1-35"></a></span>
+<span id="cb1-36"><a href="#cb1-36"></a><span class="co"># Also, create a binary classification:</span></span>
+<span id="cb1-37"><a href="#cb1-37"></a>df<span class="op">$</span>vicsB &lt;-<span class="st"> </span><span class="kw">sapply</span>(df<span class="op">$</span>vics, <span class="cf">function</span>(v) {</span>
+<span id="cb1-38"><a href="#cb1-38"></a>  <span class="kw">return</span>(<span class="cf">if</span> (v <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.1</span>) <span class="st">&quot;P&quot;</span> <span class="cf">else</span> <span class="st">&quot;N&quot;</span>)</span>
+<span id="cb1-39"><a href="#cb1-39"></a>})</span>
+<span id="cb1-40"><a href="#cb1-40"></a></span>
+<span id="cb1-41"><a href="#cb1-41"></a><span class="co"># Additionally, compute the Euclidean-distance:</span></span>
+<span id="cb1-42"><a href="#cb1-42"></a>df<span class="op">$</span>vicsE &lt;-<span class="st"> </span><span class="kw">as.vector</span>(philentropy<span class="op">::</span><span class="kw">distance</span>(df[, <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>])[<span class="dv">1</span>,])</span>
+<span id="cb1-43"><a href="#cb1-43"></a><span class="co">#&gt; Metric: &#39;euclidean&#39;; comparing: 150 vectors.</span></span>
+<span id="cb1-44"><a href="#cb1-44"></a>df<span class="op">$</span>vicsE &lt;-<span class="st"> </span><span class="kw">max</span>(df<span class="op">$</span>vicsE) <span class="op">-</span><span class="st"> </span>df<span class="op">$</span>vicsE</span>
+<span id="cb1-45"><a href="#cb1-45"></a></span>
+<span id="cb1-46"><a href="#cb1-46"></a>pointCommon &lt;-<span class="st"> </span><span class="kw">geom_point</span>(<span class="dt">shape=</span><span class="dv">1</span>, <span class="dt">size=</span><span class="dv">3</span>, <span class="dt">color=</span><span class="st">&quot;#000000&quot;</span>, <span class="dt">data=</span>df[chooseSample,], <span class="dt">mapping=</span><span class="kw">aes</span>(<span class="dt">x=</span>df[chooseSample,]<span class="op">$</span>X, <span class="dt">y=</span>df[chooseSample,]<span class="op">$</span>Y))</span>
+<span id="cb1-47"><a href="#cb1-47"></a></span>
+<span id="cb1-48"><a href="#cb1-48"></a></span>
+<span id="cb1-49"><a href="#cb1-49"></a>g1 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(df, <span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">y=</span>Y, <span class="dt">color=</span>Species)) <span class="op">+</span></span>
+<span id="cb1-50"><a href="#cb1-50"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb1-51"><a href="#cb1-51"></a><span class="st">  </span>pointCommon <span class="op">+</span></span>
+<span id="cb1-52"><a href="#cb1-52"></a><span class="st">  </span><span class="kw">stat_ellipse</span>()</span>
+<span id="cb1-53"><a href="#cb1-53"></a></span>
+<span id="cb1-54"><a href="#cb1-54"></a>g2 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(df, <span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">y=</span>Y)) <span class="op">+</span></span>
+<span id="cb1-55"><a href="#cb1-55"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">color=</span>vics)) <span class="op">+</span></span>
+<span id="cb1-56"><a href="#cb1-56"></a><span class="st">  </span><span class="co">#stat_ellipse() +</span></span>
+<span id="cb1-57"><a href="#cb1-57"></a><span class="st">  </span><span class="kw">scale_color_gradient</span>(<span class="dt">low=</span><span class="st">&quot;blue&quot;</span>, <span class="dt">high=</span><span class="st">&quot;red&quot;</span>)</span>
+<span id="cb1-58"><a href="#cb1-58"></a></span>
+<span id="cb1-59"><a href="#cb1-59"></a><span class="co"># TEMP TEMP TEMP</span></span>
+<span id="cb1-60"><a href="#cb1-60"></a>g3 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(df, <span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">y=</span>Y, <span class="dt">color=</span>vicsD)) <span class="op">+</span></span>
+<span id="cb1-61"><a href="#cb1-61"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="co">#+</span></span>
+<span id="cb1-62"><a href="#cb1-62"></a>  <span class="co">#stat_ellipse()</span></span>
+<span id="cb1-63"><a href="#cb1-63"></a></span>
+<span id="cb1-64"><a href="#cb1-64"></a>g4 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(df, <span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">y=</span>Y, <span class="dt">color=</span>vicsB)) <span class="op">+</span></span>
+<span id="cb1-65"><a href="#cb1-65"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb1-66"><a href="#cb1-66"></a><span class="st">  </span><span class="kw">stat_ellipse</span>()</span>
+<span id="cb1-67"><a href="#cb1-67"></a></span>
+<span id="cb1-68"><a href="#cb1-68"></a>g5 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(df, <span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">y=</span>Y)) <span class="op">+</span></span>
+<span id="cb1-69"><a href="#cb1-69"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">color=</span>vicsE)) <span class="op">+</span></span>
+<span id="cb1-70"><a href="#cb1-70"></a><span class="st">  </span><span class="co">#stat_ellipse() +</span></span>
+<span id="cb1-71"><a href="#cb1-71"></a><span class="st">  </span><span class="kw">scale_color_gradient</span>(<span class="dt">low=</span><span class="st">&quot;blue&quot;</span>, <span class="dt">high=</span><span class="st">&quot;red&quot;</span>)</span>
+<span id="cb1-72"><a href="#cb1-72"></a></span>
+<span id="cb1-73"><a href="#cb1-73"></a><span class="kw">ggarrange</span>(g1, g2, g3, g4, g5)</span>
+<span id="cb1-74"><a href="#cb1-74"></a><span class="co">#&gt; Warning in MASS::cov.trob(data[, vars]): Probable convergence failure</span></span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
